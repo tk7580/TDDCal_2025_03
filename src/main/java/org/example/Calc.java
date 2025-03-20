@@ -5,9 +5,19 @@ import java.util.stream.Collectors;
 
 public class Calc {
 
+    public static boolean debug = true;
+    public static int runCallCount = 0;
+
     public static int run(String exp) {
+        runCallCount++;
+
+        exp = exp.trim(); // 양 옆의 쓸데없는 공백 제거
         // 괄호 제거
         exp = stripOuterBrackets(exp);
+
+        if (debug) {
+            System.out.printf("exp(%d): %s\n", runCallCount, exp);
+        }
 
         // 단일항이 들어오면 바로 리턴
         if (!exp.contains(" ")) {
@@ -20,26 +30,14 @@ public class Calc {
         boolean needToCompound = needToPlus && needToMulti;
 
         if (needToSplit) {
-            int bracketsCount = 0;
-            int splitPointIndex = -1;
+            int splitPointIndex = findSplitPointIndex(exp);
 
-            for (int i = 0; i < exp.length(); i++) {
-                if (exp.charAt(i) == '(') {
-                    bracketsCount++;
-                } else if (exp.charAt(i) == ')') {
-                    bracketsCount--;
-                }
-                if (bracketsCount == 0) {
-                    splitPointIndex = i;
-                    break;
-                }
-            }
-            String firstExp = exp.substring(0, splitPointIndex + 1);
-            String secondExp = exp.substring(splitPointIndex + 4);
+            String firstExp = exp.substring(0, splitPointIndex);
+            String secondExp = exp.substring(splitPointIndex + 1);
 
-            char operator = exp.charAt(splitPointIndex + 2);
+            char operator = exp.charAt(splitPointIndex);
 
-            exp = Calc.run(firstExp) + " " + operator + " " + secondExp;
+            exp = Calc.run(firstExp) + " " + operator + " " + Calc.run(secondExp);
 
             return Calc.run(exp);
 
@@ -81,6 +79,31 @@ public class Calc {
         throw new RuntimeException("해석 불가 : 올바른 계산식이 아닙니다");
     }
 
+    private static int findSplitPointIndex(String exp) {
+        int index = findSplitPointIndexBy(exp, '+');
+
+        if (index >= 0) return index;
+
+        return findSplitPointIndexBy(exp, '*');
+    }
+
+    private static int findSplitPointIndexBy(String exp, char findChar) {
+        int bracketsCount = 0;
+
+        for (int i = 0; i < exp.length(); i++) {
+            char c = exp.charAt(i);
+
+            if (c == '(') {
+                bracketsCount++;
+            } else if (c == ')') {
+                bracketsCount--;
+            } else if (c == findChar) {
+                if (bracketsCount == 0) return i;
+            }
+        }
+        return -1;
+    }
+
     private static String stripOuterBrackets(String exp) {
 
         int outerBracketsCount = 0;
@@ -88,6 +111,7 @@ public class Calc {
         while (exp.charAt(outerBracketsCount) == '(' && exp.charAt(exp.length() - 1 - outerBracketsCount) == ')') {
             outerBracketsCount++;
         }
+        
 
         if (outerBracketsCount == 0) return exp;
 
